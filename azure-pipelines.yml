@@ -1,0 +1,234 @@
+name: $(Date:yyyyMMdd)$(Rev:.r)
+trigger: none
+#   branches:
+#     include:
+#       - main
+
+resources:
+  repositories:
+    - repository: self
+      type: git
+      name: https://github.com/jianzhang-2005/GCRS
+      clean: true
+      cleanOptions: source
+
+# schedules:
+# - cron: "10 22 * * 6"  # Wednesday 12AM EST or 5AM UTC
+#   displayName: Weekly Wednesday midnight EST export
+#   branches:
+#     include:
+#       - main
+#   always: 'true'
+#   # timezone: "Eastern Standard Time"
+
+variables:
+  devEnvironment: 'orgd33e828d' # 'GCRS Sand'
+  uatEnvironment: 'orgf2e1724b' # 'GCRS UAT'
+
+  githubRepo: 'https://github.com/jianzhang-2005/GCRS.git' # 'https://github.enterprise.com/hc/gcrs-devops.git'
+  solution1: 'GCRSSolution'
+  #solution2: 'FASDataModel' #'GCRSRibbon'
+  
+  unpackedSolution1Dir: $(Build.ArtifactStagingDirectory)/GCRSSolution
+  #unpackedSolution2Dir: $(Build.ArtifactStagingDirectory)/FASDataModel #GCRSRibbon
+  repoSolution1Dir: $(Build.SourcesDirectory)/GCRSSolution
+  #repoSolution2Dir: $(Build.SourcesDirectory)/FASDataModel #GCRSRibbon
+  PowerPlatformAppId: 7df2b8e9-2b56-4574-88c4-c112b5126c52
+  #PowerPlatformClientSecret: 
+  PowerPlatformTenantId: 855d473f-f67e-4937-8c07-d5b024fb20e2
+
+pool:
+  name: SelfhostedAgentPool  # Replace with the agent pool 'gcrs-self-hosted-agent-pool'
+  demands:
+    - agent.name -equals jian  # Forces the job to run ONLY on agent "jian-dev" 
+    # - PowerPlatformCLI
+
+# steps:
+#   - script: echo "Pipeline is running on agent"
+#     displayName: 'Run Simple Command'
+
+stages:
+
+# STAGE 1: Export and Commit Solutions
+- stage: ExportAndCommit
+  jobs:
+  - job: ExportSolutions
+    steps:
+
+    # - task: PowerShell@2
+    #   displayName: 'Cleanup'
+    #   inputs:
+    #      targetType: 'inline'
+    #      script: |
+    #        Remove-Item -Recurse -Force $(Build.SourcesDirectory) -ErrorAction SilentlyContinue
+    #        Remove-Item -Recurse -Force $(Build.ArtifactStagingDirectory) -ErrorAction SilentlyContinue
+
+    # # Explicit main branch checkout
+    # - checkout: self
+    #   #fetchDepth: '0'       # Full history (not shallow clone)
+    #   persistCredentials: 'true'  # Required for git push/pull
+
+    # # Now safely run branch-dependent commands
+    # # - script: |
+    #     # git status  # Will show "On branch main"
+    #     # git pull origin main
+
+    # - task: PowerShell@2
+    #   displayName: 'Install Power Platform CLI'
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       if (-not (Get-Command pac -ErrorAction SilentlyContinue)) {
+    #           iex "& { $(irm https://aka.ms/install-powerplatform-cli.ps1) } -Quiet"
+    #       }
+    #       pac
+
+    # - task: PowerShell@2
+    #   displayName: 'Authenticate to Dev Environment'
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       pac auth create --url "https://$(devEnvironment).crm3.dynamics.com" `
+    #         --applicationId "$(PowerPlatformAppId)" `
+    #         --clientSecret "$(PowerPlatformClientSecret)" `
+    #         --tenant "$(PowerPlatformTenantId)"
+
+    # - task: PowerShell@2
+    #   displayName: 'Export and Unpack Solution 1'
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       # Export solution 1
+    #       pac solution export --path "$(Build.ArtifactStagingDirectory)/$(solution1)_unmanaged.zip" `
+    #         --name "$(solution1)" `
+    #         --managed false
+
+    #       pac solution export --path "$(Build.ArtifactStagingDirectory)/$(solution1)_managed.zip" `
+    #         --name "$(solution1)" `
+    #         --managed true
+
+    #       # Unpack solution 1
+    #       pac solution unpack --zipfile "$(Build.ArtifactStagingDirectory)/$(solution1)_unmanaged.zip" `
+    #         --folder "$(unpackedSolution1Dir)" `
+    #         --allowDelete
+
+    #       # Export solution 2
+    #       pac solution export --path "$(Build.ArtifactStagingDirectory)/$(solution2)_unmanaged.zip" `
+    #         --name "$(unpackedSolution2Dir)" `
+    #         --managed false
+
+    #       pac solution export --path "$(Build.ArtifactStagingDirectory)/$(solution2)_managed.zip" `
+    #         --name "$(unpackedSolution2Dir)" `
+    #         --managed false            
+
+    #       # Unpack solution 2
+    #       pac solution unpack --zipfile "$(Build.ArtifactStagingDirectory)/$(solution2)_unmanaged.zip" `
+    #         --folder "$(unpackedSolution2Dir)" `
+    #         --allowDelete
+
+    # - task: PowerShell@2
+    #   displayName: 'Update Git Repository (Solution 1)'
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       # Go to repo folder
+    #       cd $(Build.SourcesDirectory)
+
+    #       # Override solution folder
+    #       if (Test-Path $(repoSolution1Dir))  {Remove-Item -Recurse -Force $(repoSolution1Dir) -ErrorAction SilentlyContinue}
+    #       Copy-Item -Recurse -Path "$(unpackedSolution1Dir)" -Destination "$(repoSolution1Dir)"
+          
+    #       if (Test-Path $(repoSolution2Dir))  {Remove-Item -Recurse -Force $(repoSolution2Dir) -ErrorAction SilentlyContinue}
+    #       Copy-Item -Recurse -Path "$(unpackedSolution2Dir)" -Destination "$(repoSolution2Dir)"
+
+    #       # Commit changes
+    #       git config --global user.email "azure-pipeline.gcrs-ci-cd.azure-devops@glitterystar.com"
+    #       git config --global user.name "Azure DevOps GCRS CI-CD azure-pipeline"
+    #       git add --all
+    #       git commit -m "Automated update: $(solution1) and $(solution2) $(Build.BuildNumber)"
+    #       echo 'git push #origin main'
+    #       git push origin HEAD:main
+    
+    - script: echo "##vso[task.setvariable variable=myVar;isOutput=true]Hello from Stage1"
+      name: ExportSolutionRrefreshRepo
+ 
+# STAGE 2: Pack and Import Managed Solutions
+- stage: PackAndImport
+  dependsOn: ExportAndCommit
+  condition: succeeded()
+  jobs:
+  - job: PackAndImport
+    # - checkout: none
+    variables:
+      myVarFromStage1: $[ dependencies.ExportAndCommit.outputs['Export_Solutions.step1.myVar'] ]  # Referencing output variable
+ 
+    steps:
+    - script: 
+       echo "Test"
+       echo $(myVarFromStage1)
+      name: CloneRepoPackSolutionAsManagedImportToTarget    
+#     - task: PowerShell@2
+#       displayName: 'Install Power Platform CLI'
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           if (-not (Get-Command pac -ErrorAction SilentlyContinue)) {
+#               iex "& { $(irm https://aka.ms/install-powerplatform-cli.ps1) } -Quiet"
+#           }
+#           pac --version
+
+#     - task: PowerShell@2
+#       displayName: 'Authenticate to UAT Environment'
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           pac auth create --url "https://$(uatEnvironment).crm3.dynamics.com" `
+#             --applicationId "$(PowerPlatformAppId)" `
+#             --clientSecret "$(PowerPlatformClientSecret)" `
+#             --tenant "$(PowerPlatformTenantId)"
+
+#     - task: PowerShell@2
+#       displayName: 'Pull Latest from GitHub'
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           git clone $(githubRepo) $(Build.SourcesDirectory)
+#           cd $(Build.SourcesDirectory)
+#           git pull origin main
+
+#     - task: PowerShell@2
+#       displayName: 'Pack Managed Solutions'
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           # Pack solutions
+#           pac solution pack --folder "$(repoSolution1Dir)" `
+#             --zipfile "$(Build.ArtifactStagingDirectory)/$(solution1)_managed.zip" `
+#             --packagetype Managed
+
+#           pac solution pack --folder "$(repoSolution2Dir)" `
+#             --zipfile "$(Build.ArtifactStagingDirectory)/$(solution2)_managed.zip" `
+#             --packagetype Managed
+
+#     - task: PowerShell@2
+#       displayName: 'Import to UAT'
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           # Import solutions
+#           pac solution import --path "$(Build.ArtifactStagingDirectory)/$(solution1)_managed.zip" `
+#             --activate-plugins `
+#             --force-overwrite
+
+#           pac solution import --path "$(Build.ArtifactStagingDirectory)/$(solution2)_managed.zip" `
+#             --activate-plugins `
+#             --force-overwrite
+
+#     - task: PowerShell@2
+#       displayName: 'Cleanup'
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           Remove-Item -Recurse -Force $(Build.SourcesDirectory) -ErrorAction SilentlyContinue
+#           Remove-Item -Recurse -Force $(Build.ArtifactStagingDirectory) -ErrorAction SilentlyContinue
+#

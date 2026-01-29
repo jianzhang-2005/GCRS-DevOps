@@ -1,0 +1,65 @@
+# Could not determine the agent queue name, please manually add a queue to target.
+trigger:
+  branches:
+    include:
+    - refs/heads/main
+resources:
+  repositories:
+  - repository: self
+    type: git
+    ref: refs/heads/main
+jobs:
+- job: Job_1
+  displayName: Push GCRS
+  pool: default
+  steps:
+  - checkout: self
+    clean: true
+    fetchTags: false
+  - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.tool-installer.PowerPlatformToolInstaller@2
+    displayName: 'Power Platform Tool Installer '
+  - task: PowerShell@2
+    displayName: PowerShell Script
+    inputs:
+      targetType: inline
+      script: >
+        # Write your PowerShell commands here.
+
+
+        Write-Host "Hello World!"
+
+        #Invoke-WebRequest https://dev.azure.com/GlitteryStar/_apis/connectionData
+  - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.whoami.PowerPlatformWhoAmi@2
+    displayName: 'Power Platform WhoAmI '
+    inputs:
+      authenticationType: PowerPlatformSPN
+      PowerPlatformSPN: 52339e67-e4fe-4cb3-b370-44dd98921fde
+      Environment: ''
+  - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.export-solution.PowerPlatformExportSolution@2
+    displayName: 'Power Platform Export Solution '
+    inputs:
+      authenticationType: PowerPlatformSPN
+      PowerPlatformSPN: 52339e67-e4fe-4cb3-b370-44dd98921fde
+      SolutionName: GCRS Solution
+      SolutionOutputFile: $(Build.SourcesDirectory)/GCRSSolution.zip
+      TargetVersion: 1.0.0.2
+      AsyncOperation: false
+  - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.unpack-solution.PowerPlatformUnpackSolution@2
+    displayName: 'Power Platform Unpack Solution '
+    inputs:
+      SolutionInputFile: $(Build.SourcesDirectory)/GCRSSolution.zip
+      SolutionTargetFolder: $(Build.SourcesDirectory)/GCRSSolution
+  - task: CmdLine@2
+    displayName: Command Line Script
+    inputs:
+      script: >
+        echo Write your commands here
+
+
+        echo Hello world
+
+
+        git commit -am 'Update'
+
+        git push origin HEAD:main
+...
